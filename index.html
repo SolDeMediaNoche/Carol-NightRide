@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Para Carol • Night Ride FM</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+  <!-- Google Fonts: Playfair Display & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;0,800;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    :root {
+      --bg-1: #090612;
+      --bg-2: #1f0c36;
+      --accent: #ff2a85;
+      --accent-2: #00f0ff;
+      --accent-glow: rgba(255, 42, 133, 0.45);
+      --card-bg: rgba(14, 12, 26, 0.72);
+      --card-border: rgba(255, 255, 255, 0.14);
+      --text-main: #ffffff;
+      --text-muted: rgba(255, 255, 255, 0.72);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: linear-gradient(135deg, var(--bg-1), var(--bg-2));
+      color: var(--text-main);
+      min-height: 100vh;
+      overflow-x: hidden;
+      transition: background 1.2s ease, color 0.8s ease;
+    }
+
+    .font-serif-display {
+      font-family: 'Playfair Display', serif;
+    }
+
+    /* Fondo animado en canvas */
+    #visualizer-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Glassmorphism avanzado */
+    .glass-panel {
+      background: var(--card-bg);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid var(--card-border);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35), 0 0 30px var(--accent-glow);
+      transition: border-color 0.8s ease, box-shadow 0.8s ease, background 0.8s ease;
+    }
+
+    .accent-text {
+      color: var(--accent);
+      transition: color 0.8s ease;
+    }
+
+    .accent-bg {
+      background-color: var(--accent);
+      transition: background-color 0.8s ease, transform 0.2s ease, box-shadow 0.3s ease;
+    }
+
+    .accent-bg:hover {
+      filter: brightness(1.1);
+      box-shadow: 0 0 25px var(--accent-glow);
+    }
+
+    /* Animación de disco de vinilo */
+    @keyframes spinSlow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .vinyl-spinning {
+      animation: spinSlow 6s linear infinite;
+    }
+
+    .vinyl-paused {
+      animation-play-state: paused;
+    }
+
+    /* Pantalla de bienvenida (Sobre / Regalo) */
+    #intro-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: radial-gradient(circle at center, #1b0b2e 0%, #05030a 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1), transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    #intro-overlay.opened {
+      opacity: 0;
+      transform: scale(1.08);
+      pointer-events: none;
+    }
+
+    @keyframes floatEnvelope {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-10px) rotate(1deg); }
+    }
+
+    .envelope-card {
+      animation: floatEnvelope 4s ease-in-out infinite;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+
+    .shimmer-btn {
+      background: linear-gradient(90deg, #ff2a85, #ff6b35, #00f0ff, #ff2a85);
+      background-size: 200% auto;
+      animation: shimmer 3s linear infinite;
+    }
+
+    /* Galería inteligente autoajustable */
+    .smart-media-frame {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 5;
+      border-radius: 1rem;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.35);
+    }
+
+    .smart-media-bg {
+      position: absolute;
+      inset: -15%;
+      width: 130%;
+      height: 130%;
+      object-fit: cover;
+      filter: blur(22px) brightness(0.55);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .smart-media-fg {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      transition: transform 0.4s ease;
+    }
+
+    .smart-media-frame:hover .smart-media-fg {
+      transform: scale(1.03);
+    }
+
+    /* Barras de ecualizador */
+    @keyframes eqBar {
+      0%, 100% { height: 25%; }
+      50% { height: 100%; }
+    }
+    .eq-active .bar-1 { animation: eqBar 0.55s ease-in-out infinite; }
+    .eq-active .bar-2 { animation: eqBar 0.4s ease-in-out infinite 0.15s; }
+    .eq-active .bar-3 { animation: eqBar 0.65s ease-in-out infinite 0.05s; }
+    .eq-active .bar-4 { animation: eqBar 0.48s ease-in-out infinite 0.25s; }
+
+    /* Scrollbar sutil */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.2);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.25);
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Lienzo del visualizador reactivo al audio -->
+  <canvas id="visualizer-canvas"></canvas>
+
+  <!-- PANTALLA 1: SOBRE / REGALO INICIAL (MISTERIO NIGHT RIDE SIN SPOILERS) -->
+  <div id="intro-overlay" class="p-6">
+    <div class="envelope-card max-w-md w-full glass-panel rounded-3xl p-8 text-center relative overflow-hidden border border-pink-400/30">
+      <div class="absolute -top-20 -right-20 w-44 h-44 bg-pink-500/20 rounded-full blur-3xl"></div>
+      <div class="absolute -bottom-20 -left-20 w-44 h-44 bg-cyan-400/20 rounded-full blur-3xl"></div>
+
+      <div class="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-tr from-pink-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-pink-500/30">
+        <svg class="w-11 h-11 text-slate-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="5.5" cy="17.5" r="3.5"/>
+          <circle cx="18.5" cy="17.5" r="3.5"/>
+          <path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 11.5V14l-3-3 4-3 2 3h2"/>
+          <path d="M5.5 17.5L9 11h4l3.5 6.5"/>
+        </svg>
+      </div>
+
+      <span class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-[11px] font-bold tracking-widest uppercase bg-white/10 text-cyan-300 mb-3 border border-cyan-400/25">
+        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+        ACCESO RESERVADO • NIGHT RIDE
+      </span>
+
+      <h1 class="font-serif-display text-3xl sm:text-4xl font-bold text-white mb-3">
+        Una sorpresa para Carol
+      </h1>
+
+      <p class="text-sm sm:text-base text-white/75 mb-8 leading-relaxed">
+        Carol, preparé esta pequeña estación para celebrar tu día. Hay música, recuerdos y un montón de buenos deseos esperándote. Esta transmisión es solo tuya. 💖
+      </p>
+
+      <button id="open-surprise-btn" class="shimmer-btn w-full py-4 px-6 rounded-2xl font-extrabold text-slate-950 text-lg shadow-xl flex items-center justify-center gap-3 cursor-pointer transform active:scale-95 transition">
+        <i data-lucide="zap" class="w-5 h-5 fill-current"></i>
+        <span>Encender Motor y Abrir</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- BOTÓN FLOTANTE DE PERSONALIZACIÓN -->
+  <button id="open-settings-btn" title="Personalizar carta, fotos y música" class="fixed top-4 right-4 z-40 glass-panel p-3 rounded-full hover:scale-110 transition cursor-pointer flex items-center gap-2 text-xs font-semibold">
+    <i data-lucide="settings" class="w-5 h-5 accent-text"></i>
+    <span class="hidden sm:inline pr-1">Personalizar</span>
+  </button>
+
+  <!-- CONTENIDO PRINCIPAL DE LA CARTA -->
+  <main id="main-content" class="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-14 space-y-8 opacity-0 transition-opacity duration-1000">
+    
+    <!-- ENCABEZADO + ESTACIÓN DE RADIO -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+      
+      <!-- Tarjeta Principal de Felicitación -->
+      <div class="lg:col-span-7 glass-panel rounded-3xl p-7 sm:p-10 flex flex-col justify-between relative overflow-hidden">
+        <div>
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-5">
+            <span class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/10 border border-white/15">
+              <span class="w-2 h-2 rounded-full accent-bg animate-ping"></span>
+              Edición Especial • 1000cc Vibes
+            </span>
+            <button id="confetti-trigger-btn" class="text-xs px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 transition flex items-center gap-1.5 cursor-pointer">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 accent-text"></i>
+              <span>¡Destello Neón!</span>
+            </button>
+          </div>
+
+          <h2 class="font-serif-display text-4xl sm:text-5xl font-extrabold leading-tight mb-4">
+            ¡Feliz Cumpleaños, <span id="display-name" class="accent-text italic">Carol</span>! ✨
+          </h2>
+
+          <div id="display-message" class="space-y-4 text-base sm:text-lg text-white/85 leading-relaxed font-normal">
+            <p>Hoy celebramos una vuelta más al sol a máxima velocidad: tu vibra única, tu estilo imparable y cada ruta nocturna que ilumina la ciudad.</p>
+            <p>Que este nuevo año venga con tanque lleno, curvas perfectas, música que te haga sentir invencible y sueños cumplidos sin frenos. ¡Disfruta tu noche!</p>
+          </div>
+        </div>
+
+        <div class="mt-8 pt-6 border-t border-white/15 flex items-center justify-between">
+          <div>
+            <p class="text-xs uppercase tracking-wider text-white/50">Transmisión dedicada por</p>
+            <p id="display-sender" class="font-serif-display text-xl font-semibold accent-text">RDFSTR 🏁</p>
+          </div>
+          <!-- Selector rápido de tema visual -->
+          <div class="flex items-center gap-1.5" title="Cambiar ambiente visual">
+            <button data-theme-idx="0" class="theme-dot w-5 h-5 rounded-full bg-pink-500 border-2 border-white cursor-pointer hover:scale-125 transition"></button>
+            <button data-theme-idx="1" class="theme-dot w-5 h-5 rounded-full bg-purple-500 border-2 border-transparent cursor-pointer hover:scale-125 transition"></button>
+            <button data-theme-idx="2" class="theme-dot w-5 h-5 rounded-full bg-cyan-400 border-2 border-transparent cursor-pointer hover:scale-125 transition"></button>
+            <button data-theme-idx="3" class="theme-dot w-5 h-5 rounded-full bg-orange-500 border-2 border-transparent cursor-pointer hover:scale-125 transition"></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ESTACIÓN DE RADIO ("NIGHT RIDE FM") -->
+      <div class="lg:col-span-5 glass-panel rounded-3xl p-6 sm:p-8 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <i data-lucide="radio" class="w-5 h-5 accent-text"></i>
+              <span class="text-xs font-bold tracking-widest uppercase">Night Ride FM • 104.9</span>
+            </div>
+            <span id="theme-badge" class="text-[11px] px-2.5 py-0.5 rounded-full bg-white/10 accent-text font-medium">
+              Neón Sayonara
+            </span>
+          </div>
+
+          <!-- Vinilo giratorio + info de pista -->
+          <div class="flex items-center gap-5 my-5">
+            <div class="relative w-24 h-24 sm:w-28 sm:h-28 flex-shrink-0">
+              <div id="vinyl-disc" class="w-full h-full rounded-full bg-gradient-to-tr from-zinc-950 via-zinc-800 to-zinc-900 border-4 border-white/15 shadow-2xl flex items-center justify-center vinyl-spinning vinyl-paused">
+                <div class="w-10 h-10 rounded-full accent-bg flex items-center justify-center border-2 border-zinc-900">
+                  <div class="w-2.5 h-2.5 rounded-full bg-zinc-950"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 mb-1">
+                <span id="track-number-badge" class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-white/15">
+                  Pista 1 / 4
+                </span>
+                <div id="radio-eq" class="flex items-end gap-0.5 h-3">
+                  <span class="bar-1 w-1 bg-amber-400 rounded-full h-1"></span>
+                  <span class="bar-2 w-1 bg-amber-400 rounded-full h-2"></span>
+                  <span class="bar-3 w-1 bg-amber-400 rounded-full h-1.5"></span>
+                  <span class="bar-4 w-1 bg-amber-400 rounded-full h-1"></span>
+                </div>
+              </div>
+              <h3 id="track-title" class="font-serif-display text-xl sm:text-2xl font-bold truncate">
+                Feliz cumpleaños
+              </h3>
+              <p id="track-artist" class="text-xs sm:text-sm text-white/65 truncate">
+                Alvarito Díaz
+              </p>
+            </div>
+          </div>
+
+          <!-- Barra de progreso -->
+          <div class="space-y-1.5 mb-5">
+            <div class="w-full h-1.5 bg-white/15 rounded-full overflow-hidden">
+              <div id="radio-progress" class="h-full accent-bg w-0 transition-all duration-200"></div>
+            </div>
+            <div class="flex justify-between text-[11px] text-white/55 font-mono">
+              <span id="radio-current-time">0:00</span>
+              <span id="radio-duration">0:24</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controles de la Radio -->
+        <div>
+          <div class="flex items-center justify-center gap-4 mb-5">
+            <button id="prev-track-btn" class="p-3 rounded-full bg-white/10 hover:bg-white/20 transition cursor-pointer" title="Canción anterior">
+              <i data-lucide="skip-back" class="w-5 h-5"></i>
+            </button>
+            <button id="play-pause-btn" class="p-4 rounded-full accent-bg text-slate-950 shadow-lg cursor-pointer transform active:scale-95" title="Reproducir / Pausar">
+              <i id="play-pause-icon" data-lucide="play" class="w-6 h-6 fill-current"></i>
+            </button>
+            <button id="next-track-btn" class="p-3 rounded-full bg-white/10 hover:bg-white/20 transition cursor-pointer" title="Siguiente canción">
+              <i data-lucide="skip-forward" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <!-- Lista rápida de emisoras/canciones -->
+          <div id="playlist-mini" class="space-y-1.5 max-h-32 overflow-y-auto pr-1 text-xs">
+            <!-- Se llena dinámicamente con JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN 3: GALERÍA INTELIGENTE DE FOTOS Y VIDEOS -->
+    <section class="glass-panel rounded-3xl p-6 sm:p-8">
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-white/10">
+            <i data-lucide="images" class="w-5 h-5 accent-text"></i>
+          </div>
+          <div>
+            <h3 class="font-serif-display text-2xl font-bold">Rutas, Máquinas & Recuerdos</h3>
+            <p class="text-xs sm:text-sm text-white/65">Toca cualquier foto o video para verlo en pantalla completa</p>
+          </div>
+        </div>
+
+        <label class="px-4 py-2 rounded-xl accent-bg text-slate-950 text-xs font-bold cursor-pointer flex items-center gap-2 shadow-md">
+          <i data-lucide="image-plus" class="w-4 h-4"></i>
+          <span>Añadir Fotos / Videos</span>
+          <input id="quick-media-upload" type="file" accept="image/*,video/*" multiple class="hidden" />
+        </label>
+      </div>
+
+      <div id="media-gallery-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Se renderiza dinámicamente -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- LIGHTBOX PARA VISTA AMPLIADA DE FOTOS Y VIDEOS -->
+  <div id="lightbox-modal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-lg hidden items-center justify-center p-4" onclick="closeLightbox()">
+    <button class="absolute top-5 right-5 p-3 rounded-full bg-white/15 hover:bg-white/25 text-white cursor-pointer">
+      <i data-lucide="x" class="w-6 h-6"></i>
+    </button>
+    <div id="lightbox-body" class="max-w-4xl max-h-[88vh] flex flex-col items-center justify-center" onclick="event.stopPropagation()"></div>
+  </div>
+
+  <!-- MODAL DE PERSONALIZACIÓN COMPLETA -->
+  <div id="settings-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="glass-panel bg-slate-900/90 max-w-2xl w-full rounded-3xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto space-y-6 border border-white/20">
+      <div class="flex items-center justify-between border-b border-white/15 pb-4">
+        <h3 class="font-serif-display text-2xl font-bold flex items-center gap-2">
+          <i data-lucide="wand-2" class="w-6 h-6 accent-text"></i>
+          <span>Personalizar Carta Sorpresa</span>
+        </h3>
+        <button id="close-settings-btn" class="p-2 rounded-full bg-white/10 hover:bg-white/20 cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Textos de la carta -->
+      <div class="space-y-4">
+        <h4 class="text-xs font-bold uppercase tracking-wider accent-text">1. Dedicatoria</h4>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-white/70 mb-1">Nombre / Apodo de ella</label>
+            <input id="input-name" type="text" value="Carol" class="w-full px-3.5 py-2.5 rounded-xl bg-white/10 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-400" />
+          </div>
+          <div>
+            <label class="block text-xs text-white/70 mb-1">Firma / De parte de</label>
+            <input id="input-sender" type="text" value="Con mucho cariño 💖" class="w-full px-3.5 py-2.5 rounded-xl bg-white/10 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-400" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-white/70 mb-1">Mensaje de la Carta</label>
+          <textarea id="input-message" rows="4" class="w-full px-3.5 py-2.5 rounded-xl bg-white/10 border border-white/15 text-sm text-white focus:outline-none focus:border-pink-400">Carol:
+
+Hoy el mundo tiene una razón más para sonar bonito: es tu cumpleaños. Espero que este nuevo año te regale momentos que se queden contigo, personas que te hagan bien, muchísimas risas y oportunidades para cumplir todo eso que sueñas.
+
+Que nunca te falten canciones para cada estado de ánimo, lugares nuevos por descubrir y motivos para sentirte orgullosa de la persona en la que te estás convirtiendo. Ojalá cada recuerdo que venga sea de esos que uno quisiera poner en repeat.
+
+Te preparé esta pequeña estación con música y recuerdos para recordarte lo especial que eres. Disfruta mucho tu día, celebra a tu manera y no olvides que mereces cosas increíbles.
+
+¡Feliz cumpleaños, Carol! Que esta nueva vuelta al sol sea una de tus favoritas. 💖✨</textarea>
+        </div>
+      </div>
+
+      <!-- Música de la Radio -->
+      <div class="space-y-3 pt-2 border-t border-white/15">
+        <h4 class="text-xs font-bold uppercase tracking-wider accent-text">2. Estación de Radio (Pista #1 = Feliz Cumpleaños)</h4>
+        <p class="text-xs text-white/65">La primera pista es el saludo de cumpleaños. Puedes reemplazarla o añadir canciones desde tu dispositivo; los nombres se limpian automáticamente (por ejemplo, se elimina “y2meta.com”). Los cambios hechos desde aquí son locales a este navegador y no se publican en GitHub por sí solos.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <label class="p-3 rounded-xl bg-white/10 hover:bg-white/15 border border-dashed border-white/25 cursor-pointer flex items-center gap-3 text-xs">
+            <i data-lucide="music" class="w-5 h-5 accent-text shrink-0"></i>
+            <span>Reemplazar Pista #1 ("Feliz Cumpleaños" MP3)</span>
+            <input id="replace-bday-song" type="file" accept="audio/*" class="hidden" />
+          </label>
+          <label class="p-3 rounded-xl bg-white/10 hover:bg-white/15 border border-dashed border-white/25 cursor-pointer flex items-center gap-3 text-xs">
+            <i data-lucide="list-plus" class="w-5 h-5 accent-text shrink-0"></i>
+            <span>Añadir música a la Radio</span>
+            <input id="add-radio-songs" type="file" accept="audio/*" multiple class="hidden" />
+          </label>
+        </div>
+      </div>
+
+      <!-- Fotos y Videos -->
+      <div class="space-y-3 pt-2 border-t border-white/15">
+        <h4 class="text-xs font-bold uppercase tracking-wider accent-text">3. Galería de Recuerdos (Autoajuste Inteligente)</h4>
+        <label class="p-4 rounded-xl bg-white/10 hover:bg-white/15 border border-dashed border-white/25 cursor-pointer flex items-center justify-center gap-3 text-xs font-semibold">
+          <i data-lucide="folder-up" class="w-5 h-5 accent-text"></i>
+          <span>Seleccionar Fotos y Videos desde este dispositivo</span>
+          <input id="modal-media-upload" type="file" accept="image/*,video/*" multiple class="hidden" />
+        </label>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-4 border-t border-white/15">
+        <button id="save-settings-btn" class="px-6 py-2.5 rounded-xl accent-bg text-slate-950 font-bold text-sm cursor-pointer">
+          Guardar Cambios
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast de notificación (reemplaza alert) -->
+  <div id="toast-msg" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl glass-panel text-xs sm:text-sm font-semibold opacity-0 pointer-events-none transition-opacity duration-300 flex items-center gap-2">
+    <i data-lucide="check-circle-2" class="w-4 h-4 accent-text"></i>
+    <span id="toast-text">Listo</span>
+  </div>
+
+  <script>
+    // Inicializar iconos Lucide
+    lucide.createIcons();
+
+    // =========================================================================
+    // 1. TEMAS VISUALES DINÁMICOS (PALETAS NOCTURNAS & MOTOS)
+    // =========================================================================
+    const THEMES = [
+      {
+        name: "Neón Sayonara",
+        bg1: "#090612",
+        bg2: "#240b36",
+        accent: "#ff2a85",
+        accent2: "#00f0ff",
+        glow: "rgba(255, 42, 133, 0.45)",
+        particleRgb: "255, 42, 133",
+        gridRgb: "0, 240, 255"
+      },
+      {
+        name: "Cyber Urbano",
+        bg1: "#0b0719",
+        bg2: "#2e1065",
+        accent: "#d946ef",
+        accent2: "#38bdf8",
+        glow: "rgba(217, 70, 239, 0.45)",
+        particleRgb: "217, 70, 239",
+        gridRgb: "56, 189, 248"
+      },
+      {
+        name: "Midnight Tokyo",
+        bg1: "#050d1a",
+        bg2: "#0f294a",
+        accent: "#00f0ff",
+        accent2: "#fbbf24",
+        glow: "rgba(0, 240, 255, 0.42)",
+        particleRgb: "0, 240, 255",
+        gridRgb: "0, 240, 255"
+      },
+      {
+        name: "Redline Turbo",
+        bg1: "#140608",
+        bg2: "#3d0c14",
+        accent: "#ff5400",
+        accent2: "#ffbe0b",
+        glow: "rgba(255, 84, 0, 0.45)",
+        particleRgb: "255, 84, 0",
+        gridRgb: "255, 190, 11"
+      }
+    ];
+
+    let currentTheme = THEMES[0];
+
+    function applyTheme(index) {
+      const theme = THEMES[index % THEMES.length];
+      currentTheme = theme;
+      document.documentElement.style.setProperty('--bg-1', theme.bg1);
+      document.documentElement.style.setProperty('--bg-2', theme.bg2);
+      document.documentElement.style.setProperty('--accent', theme.accent);
+      document.documentElement.style.setProperty('--accent-2', theme.accent2);
+      document.documentElement.style.setProperty('--accent-glow', theme.glow);
+      document.getElementById('theme-badge').textContent = theme.name;
+
+      document.querySelectorAll('.theme-dot').forEach((dot, idx) => {
+        dot.style.borderColor = idx === (index % THEMES.length) ? '#ffffff' : 'transparent';
+      });
+    }
+
+    document.querySelectorAll('.theme-dot').forEach(btn => {
+      btn.addEventListener('click', () => {
+        applyTheme(parseInt(btn.dataset.themeIdx, 10));
+      });
+    });
+
+    // =========================================================================
+    // 2. MOTOR DE AUDIO WEB AUDIO API + BEATS URBANOS/SYNTHWAVE + ANALYSERNODE
+    // =========================================================================
+    let audioCtx = null;
+    let analyser = null;
+    let dataArray = null;
+    let masterGain = null;
+
+    function initAudioEngine() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContextClass();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.82;
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = 0.72;
+        masterGain.connect(analyser);
+        analyser.connect(audioCtx.destination);
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    // Notas musicales en Hz
+    const N = {
+      A2: 110.00, C3: 130.81, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196.00,
+      C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00, A4: 440.00, Bb4: 466.16, B4: 493.88,
+      C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880.00
+    };
+
+    // Melodía 1 (OBLIGATORIA AL INICIAR): Feliz Cumpleaños completa
+    const HAPPY_BIRTHDAY_NOTES = [
+      { f: N.C4, d: 0.35, kick: true }, { f: N.C4, d: 0.25 }, { f: N.D4, d: 0.6, kick: true }, { f: N.C4, d: 0.6 }, { f: N.F4, d: 0.6, kick: true }, { f: N.E4, d: 1.1 },
+      { f: N.C4, d: 0.35, kick: true }, { f: N.C4, d: 0.25 }, { f: N.D4, d: 0.6, kick: true }, { f: N.C4, d: 0.6 }, { f: N.G4, d: 0.6, kick: true }, { f: N.F4, d: 1.1 },
+      { f: N.C4, d: 0.35, kick: true }, { f: N.C4, d: 0.25 }, { f: N.C5, d: 0.6, kick: true }, { f: N.A4, d: 0.6 }, { f: N.F4, d: 0.6, kick: true }, { f: N.E4, d: 0.6 }, { f: N.D4, d: 1.1 },
+      { f: N.Bb4, d: 0.35, kick: true }, { f: N.Bb4, d: 0.25 }, { f: N.A4, d: 0.6, kick: true }, { f: N.F4, d: 0.6 }, { f: N.G4, d: 0.6, kick: true }, { f: N.F4, d: 1.3 }
+    ];
+
+    // Melodía 2: Beat Urbano / Sayonara Nights
+    const URBAN_NIGHT_NOTES = [
+      { f: N.A4, d: 0.35, kick: true }, { f: N.C5, d: 0.35 }, { f: N.E5, d: 0.5, kick: true }, { f: N.D5, d: 0.35 },
+      { f: N.C5, d: 0.35, kick: true }, { f: N.B4, d: 0.35 }, { f: N.A4, d: 0.65, kick: true },
+      { f: N.F4, d: 0.35, kick: true }, { f: N.A4, d: 0.35 }, { f: N.C5, d: 0.5, kick: true }, { f: N.B4, d: 0.35 },
+      { f: N.G4, d: 0.35, kick: true }, { f: N.E4, d: 0.35 }, { f: N.A4, d: 0.8, kick: true },
+      { f: N.E5, d: 0.35, kick: true }, { f: N.D5, d: 0.35 }, { f: N.C5, d: 0.5, kick: true }, { f: N.B4, d: 0.35 },
+      { f: N.C5, d: 0.4, kick: true }, { f: N.A4, d: 0.8 }
+    ];
+
+    // Melodía 3: Synthwave Autopista Nocturna
+    const SYNTHWAVE_RIDE_NOTES = [
+      { f: N.E4, d: 0.3, kick: true }, { f: N.G4, d: 0.3 }, { f: N.B4, d: 0.45, kick: true }, { f: N.E5, d: 0.45 },
+      { f: N.D5, d: 0.3, kick: true }, { f: N.B4, d: 0.3 }, { f: N.G4, d: 0.6, kick: true },
+      { f: N.C4, d: 0.3, kick: true }, { f: N.E4, d: 0.3 }, { f: N.G4, d: 0.45, kick: true }, { f: N.C5, d: 0.45 },
+      { f: N.B4, d: 0.3, kick: true }, { f: N.G4, d: 0.3 }, { f: N.E4, d: 0.7, kick: true }
+    ];
+
+    // Melodía 4: Redline 14,000 RPM
+    const REDLINE_TURBO_NOTES = [
+      { f: N.D4, d: 0.25, kick: true }, { f: N.F4, d: 0.25 }, { f: N.A4, d: 0.4, kick: true }, { f: N.D5, d: 0.4 },
+      { f: N.C5, d: 0.25, kick: true }, { f: N.A4, d: 0.25 }, { f: N.F4, d: 0.45, kick: true },
+      { f: N.G4, d: 0.25, kick: true }, { f: N.Bb4, d: 0.25 }, { f: N.D5, d: 0.4, kick: true }, { f: N.F5, d: 0.4 },
+      { f: N.E5, d: 0.35, kick: true }, { f: N.D5, d: 0.7 }
+    ];
+
+    // Limpia etiquetas de archivos descargados sin modificar el archivo original.
+    function cleanTrackTitle(filename) {
+      return String(filename || '')
+        .replace(/\.[^/.]+$/, '')
+        .replace(/\b(?:www\.)?y2meta\.com\b/gi, '')
+        .replace(/\s*[-_|]+\s*$/g, '')
+        .replace(/\s{2,}/g, ' ')
+        .replace(/^[-_|\s]+|[-_|\s]+$/g, '')
+        .trim() || 'Canción sin título';
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[char]));
+    }
+
+    // Playlist: saludo de cumpleaños + canciones incluidas en musuc
+    const radioPlaylist = [
+      { title: "Feliz cumpleaños", artist: "Alvarito Díaz", themeIdx: 0, type: "file", url: "Feliz cumple (3).mp3" },
+      { title: "INAROW62.", artist: "Álvaro Díaz", themeIdx: 1, type: "file", url: "Alvaro Diaz - INAROW62. (Visualizer).mp4" },
+      { title: "Ramona Flowers", artist: "Álvaro Díaz", themeIdx: 2, type: "file", url: "Alvaro Diaz - Ramona Flowers (Official Video).mp3" },
+      { title: "FERXXO 100", artist: "Feid", themeIdx: 3, type: "file", url: "Ferxxo 100_spotdown.org.mp3" },
+      { title: "MUBI", artist: "NSQK, Álvaro Díaz", themeIdx: 0, type: "file", url: "NSQK, Alvaro Díaz - MUBI.mp3" },
+      { title: "LENTITO", artist: "Álvaro Díaz", themeIdx: 1, type: "file", url: "LENTITO (Official Audio).mp4" },
+      { title: "PARANORMAL", artist: "Tainy, Álvaro Díaz", themeIdx: 2, type: "file", url: "PARANORMAL - Tainy, Álvaro Díaz.mp4" },
+      { title: "SIN PODERES", artist: "Álvaro Díaz, Young Cister", themeIdx: 3, type: "file", url: "Álvaro Díaz, Young Cister - SIN PODERES (Visualizer).mp3" },
+    ];
+
+    let currentTrackIdx = 0;
+    let isRadioPlaying = false;
+    let synthTimers = [];
+    let progressInterval = null;
+    let trackStartTime = 0;
+    let trackDurationSec = 15;
+
+    // Elemento HTML5 Audio para MP3 subidos por el usuario
+    const htmlAudioPlayer = new Audio();
+    htmlAudioPlayer.crossOrigin = "anonymous";
+    let htmlMediaSourceNode = null;
+
+    function connectHtmlAudioToAnalyser() {
+      if (!htmlMediaSourceNode && audioCtx) {
+        htmlMediaSourceNode = audioCtx.createMediaElementSource(htmlAudioPlayer);
+        htmlMediaSourceNode.connect(masterGain);
+      }
+    }
+
+    htmlAudioPlayer.addEventListener('ended', () => {
+      nextTrack();
+    });
+
+    function clearSynthPlayback() {
+      synthTimers.forEach(id => clearTimeout(id));
+      synthTimers = [];
+      clearInterval(progressInterval);
+    }
+
+    function playSynthMelody(track) {
+      initAudioEngine();
+      clearSynthPlayback();
+
+      let offset = 0;
+      const totalDur = track.notes.reduce((acc, n) => acc + n.d, 0);
+      trackDurationSec = totalDur;
+      trackStartTime = performance.now();
+
+      track.notes.forEach(note => {
+        const timerId = setTimeout(() => {
+          if (!isRadioPlaying) return;
+          triggerSynthNote(note.f, note.d, track.wave || 'triangle', !!note.kick);
+        }, offset * 1000);
+        synthTimers.push(timerId);
+        offset += note.d;
+      });
+
+      // Al terminar la melodía, pasar automáticamente a la siguiente canción de la radio
+      const endTimer = setTimeout(() => {
+        if (isRadioPlaying) {
+          nextTrack();
+        }
+      }, (totalDur + 0.4) * 1000);
+      synthTimers.push(endTimer);
+
+      startProgressTracker();
+    }
+
+    function triggerSynthNote(freq, duration, waveType, withKick = false) {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+
+      const osc1 = audioCtx.createOscillator();
+      const osc2 = audioCtx.createOscillator();
+      const noteGain = audioCtx.createGain();
+
+      osc1.type = waveType;
+      osc1.frequency.setValueAtTime(freq, now);
+
+      // Sub-bajo una octava abajo
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(freq * 0.5, now);
+
+      noteGain.gain.setValueAtTime(0.001, now);
+      noteGain.gain.exponentialRampToValueAtTime(waveType === 'sawtooth' ? 0.22 : 0.30, now + 0.03);
+      noteGain.gain.exponentialRampToValueAtTime(0.001, now + duration * 0.95);
+
+      osc1.connect(noteGain);
+      osc2.connect(noteGain);
+      noteGain.connect(masterGain);
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + duration);
+      osc2.stop(now + duration);
+
+      // Golpe de bombo (kick) para mover el visualizador al ritmo
+      if (withKick) {
+        const kickOsc = audioCtx.createOscillator();
+        const kickGain = audioCtx.createGain();
+        kickOsc.type = 'sine';
+        kickOsc.frequency.setValueAtTime(145, now);
+        kickOsc.frequency.exponentialRampToValueAtTime(38, now + 0.18);
+
+        kickGain.gain.setValueAtTime(0.45, now);
+        kickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+        kickOsc.connect(kickGain);
+        kickGain.connect(masterGain);
+        kickOsc.start(now);
+        kickOsc.stop(now + 0.21);
+      }
+    }
+
+    function triggerEngineRevSound() {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const revOsc = audioCtx.createOscillator();
+      const revGain = audioCtx.createGain();
+      revOsc.type = 'sawtooth';
+      revOsc.frequency.setValueAtTime(62, now);
+      revOsc.frequency.exponentialRampToValueAtTime(195, now + 0.35);
+      revOsc.frequency.exponentialRampToValueAtTime(75, now + 0.75);
+
+      revGain.gain.setValueAtTime(0.01, now);
+      revGain.gain.linearRampToValueAtTime(0.28, now + 0.2);
+      revGain.gain.exponentialRampToValueAtTime(0.001, now + 0.78);
+
+      revOsc.connect(revGain);
+      revGain.connect(masterGain);
+      revOsc.start(now);
+      revOsc.stop(now + 0.8);
+    }
+
+    function formatSeconds(sec) {
+      if (!isFinite(sec) || sec < 0) return "0:00";
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+
+    function startProgressTracker() {
+      clearInterval(progressInterval);
+      progressInterval = setInterval(() => {
+        if (!isRadioPlaying) return;
+        const track = radioPlaylist[currentTrackIdx];
+        let elapsed = 0;
+        let total = trackDurationSec;
+
+        if (track.type === 'file' && htmlAudioPlayer.duration) {
+          elapsed = htmlAudioPlayer.currentTime;
+          total = htmlAudioPlayer.duration;
+        } else {
+          elapsed = (performance.now() - trackStartTime) / 1000;
+        }
+
+        const pct = Math.min(100, (elapsed / (total || 1)) * 100);
+        document.getElementById('radio-progress').style.width = `${pct}%`;
+        document.getElementById('radio-current-time').textContent = formatSeconds(elapsed);
+        document.getElementById('radio-duration').textContent = formatSeconds(total);
+      }, 200);
+    }
+
+    function playTrack(index, forcePlay = true) {
+      initAudioEngine();
+
+      currentTrackIdx = (index + radioPlaylist.length) % radioPlaylist.length;
+      const track = radioPlaylist[currentTrackIdx];
+
+      // Cambiar tema visual vinculado a esta pista
+      applyTheme(track.themeIdx);
+
+      // Actualizar UI de la radio
+      document.getElementById('track-title').textContent = track.title;
+      document.getElementById('track-artist').textContent = track.artist;
+      document.getElementById('track-number-badge').textContent = `Pista ${currentTrackIdx + 1} / ${radioPlaylist.length}`;
+      document.getElementById('radio-progress').style.width = '0%';
+
+      clearSynthPlayback();
+      htmlAudioPlayer.pause();
+
+      if (forcePlay) {
+        isRadioPlaying = true;
+        updateRadioVisualState(true);
+
+        if (track.type === 'file' && track.url) {
+          connectHtmlAudioToAnalyser();
+          htmlAudioPlayer.src = track.url;
+          htmlAudioPlayer.play().then(() => {
+            startProgressTracker();
+          }).catch(() => {
+            showToast("Toca Play para iniciar el audio");
+          });
+        } else {
+          playSynthMelody(track);
+        }
+      } else {
+        isRadioPlaying = false;
+        updateRadioVisualState(false);
+      }
+
+      renderPlaylistMini();
+    }
+
+    function toggleRadioPlayPause() {
+      initAudioEngine();
+      if (isRadioPlaying) {
+        isRadioPlaying = false;
+        clearSynthPlayback();
+        htmlAudioPlayer.pause();
+        updateRadioVisualState(false);
+      } else {
+          const track = radioPlaylist[currentTrackIdx];
+        isRadioPlaying = true;
+        updateRadioVisualState(true);
+        if (track.type === 'file' && track.url) {
+          connectHtmlAudioToAnalyser();
+          htmlAudioPlayer.play();
+          startProgressTracker();
+        } else {
+          playSynthMelody(track);
+        }
+      }
+    }
+
+    function nextTrack() {
+      playTrack(currentTrackIdx + 1, true);
+    }
+
+    function prevTrack() {
+      playTrack(currentTrackIdx - 1, true);
+    }
+
+    function updateRadioVisualState(playing) {
+      const disc = document.getElementById('vinyl-disc');
+      const eq = document.getElementById('radio-eq');
+      const icon = document.getElementById('play-pause-icon');
+
+      if (playing) {
+        disc.classList.remove('vinyl-paused');
+        eq.classList.add('eq-active');
+        icon.setAttribute('data-lucide', 'pause');
+      } else {
+        disc.classList.add('vinyl-paused');
+        eq.classList.remove('eq-active');
+        icon.setAttribute('data-lucide', 'play');
+      }
+      lucide.createIcons();
+    }
+
+    function renderPlaylistMini() {
+      const container = document.getElementById('playlist-mini');
+      container.innerHTML = radioPlaylist.map((t, idx) => {
+        const active = idx === currentTrackIdx;
+        return `
+          <button onclick="playTrack(${idx}, true)" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition cursor-pointer ${active ? 'bg-white/20 font-semibold' : 'bg-white/5 hover:bg-white/10 text-white/75'}">
+            <span class="truncate pr-2">${idx + 1}. ${escapeHtml(t.title)}</span>
+            <span class="text-[10px] uppercase tracking-wider ${active ? 'accent-text' : 'text-white/45'}">
+              ${active && isRadioPlaying ? 'Sonando' : 'Escuchar'}
+            </span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    document.getElementById('play-pause-btn').addEventListener('click', toggleRadioPlayPause);
+    document.getElementById('next-track-btn').addEventListener('click', nextTrack);
+    document.getElementById('prev-track-btn').addEventListener('click', prevTrack);
+
+    // =========================================================================
+    // 4. GALERÍA INTELIGENTE AUTOAJUSTABLE + VISTA AMPLIADA (LIGHTBOX)
+    // =========================================================================
+    const mediaItems = [
+      { type: 'video', url: "videos/WhatsApp Video 2026-11-17 at 3.28.25 AM (1).mp4", caption: "Recuerdo de Carol #01 ✨" },
+      { type: 'video', url: "videos/WhatsApp Video 2026-11-17 at 3.28.25 AM.mp4", caption: "Recuerdo de Carol #02 ✨" },
+      { type: 'video', url: "videos/WhatsApp Video 2026-11-17 at 3.28.45 AM (1).mp4", caption: "Recuerdo de Carol #03 ✨" },
+      { type: 'video', url: "videos/WhatsApp Video 2026-11-17 at 3.28.45 AM (2).mp4", caption: "Recuerdo de Carol #04 ✨" },
+      { type: 'video', url: "videos/WhatsApp Video 2026-11-17 at 3.28.45 AM (3).mp4", caption: "Recuerdo de Carol #05 ✨" },
+      { type: 'video', url: "videos/WhatsApp Video 2026-11-17 at 3.28.45 AM.mp4", caption: "Recuerdo de Carol #06 ✨" },
+      { type: 'video', url: "videos/WhatsApp Video 2026-11-17 at 3.28.46 AM (1).mp4", caption: "Recuerdo de Carol #07 ✨" },
+      { type: 'video', url: "videos/WhatsApp Video 2026-11-17 at 3.28.46 AM (2).mp4", caption: "Recuerdo de Carol #08 ✨" },
+      { type: 'video', url: "videos/WhatsApp Video 2026-11-17 at 3.28.46 AM (3).mp4", caption: "Recuerdo de Carol #09 ✨" },
+      { type: 'video', url: "videos/WhatsApp Video 2026-11-17 at 3.28.46 AM (4).mp4", caption: "Recuerdo de Carol #10 ✨" },
+      { type: 'video', url: "videos/WhatsApp Video 2026-11-17 at 3.28.46 AM (5).mp4", caption: "Recuerdo de Carol #11 ✨" },
+      { type: 'video', url: "videos/WhatsApp Video 2026-11-17 at 3.28.46 AM.mp4", caption: "Recuerdo de Carol #12 ✨" },
+      { type: 'video', url: "videos/WhatsApp Video 2026-11-17 at 3.28.47 AM (1).mp4", caption: "Recuerdo de Carol #13 ✨" },
+      { type: 'video', url: "videos/WhatsApp Video 2026-11-17 at 3.28.47 AM (2).mp4", caption: "Recuerdo de Carol #14 ✨" },
+      { type: 'video', url: "videos/WhatsApp Video 2026-11-17 at 3.28.47 AM (3).mp4", caption: "Recuerdo de Carol #15 ✨" },
+      { type: 'video', url: "videos/WhatsApp Video 2026-11-17 at 3.28.47 AM.mp4", caption: "Recuerdo de Carol #16 ✨" },
+    ];
+
+    function openLightbox(idx) {
+      const item = mediaItems[idx];
+      if (!item) return;
+      const modal = document.getElementById('lightbox-modal');
+      const body = document.getElementById('lightbox-body');
+
+      if (item.type === 'video') {
+        if (isRadioPlaying) toggleRadioPlayPause();
+        body.innerHTML = `
+          <video src="${item.url}" class="max-h-[78vh] max-w-full rounded-2xl shadow-2xl" controls autoplay></video>
+          <p class="mt-3 text-sm text-white/85 font-medium">${item.caption || ''}</p>
+        `;
+      } else {
+        body.innerHTML = `
+          <img src="${item.url}" class="max-h-[78vh] max-w-full rounded-2xl shadow-2xl object-contain" />
+          <p class="mt-3 text-sm text-white/85 font-medium">${item.caption || ''}</p>
+        `;
+      }
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeLightbox() {
+      const modal = document.getElementById('lightbox-modal');
+      document.getElementById('lightbox-body').innerHTML = '';
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function renderMediaGallery() {
+      const grid = document.getElementById('media-gallery-grid');
+      grid.innerHTML = mediaItems.map((item, idx) => {
+        if (item.type === 'video') {
+          return `
+            <div class="group space-y-2.5 cursor-pointer" onclick="openLightbox(${idx})">
+              <div class="smart-media-frame shadow-xl border border-white/15">
+                <video src="${item.url}" class="smart-media-bg" muted loop autoplay playsinline></video>
+                <video src="${item.url}" class="smart-media-fg object-contain" muted loop autoplay playsinline></video>
+                <span class="absolute top-3 right-3 z-10 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md text-[10px] font-bold uppercase tracking-wider text-cyan-300">Video</span>
+              </div>
+              <p class="text-xs sm:text-sm text-white/80 font-medium px-1">${item.caption || 'Recuerdo en video'}</p>
+            </div>
+          `;
+        } else {
+          return `
+            <div class="group space-y-2.5 cursor-pointer" onclick="openLightbox(${idx})">
+              <div class="smart-media-frame shadow-xl border border-white/15">
+                <img src="${item.url}" alt="" class="smart-media-bg" onerror="this.style.display='none'" />
+                <img src="${item.url}" alt="${item.caption}" class="smart-media-fg object-cover"
+                  onload="if(this.naturalWidth > this.naturalHeight * 1.25){ this.classList.remove('object-cover'); this.classList.add('object-contain'); }"
+                  onerror="this.src='https://placehold.co/600x750/1b0b2e/ff2a85?text=Night+Ride'" />
+              </div>
+              <p class="text-xs sm:text-sm text-white/80 font-medium px-1">${item.caption || 'Momento especial'}</p>
+            </div>
+          `;
+        }
+      }).join('');
+    }
+
+    function handleMediaFiles(fileList) {
+      if (!fileList || fileList.length === 0) return;
+      Array.from(fileList).forEach(file => {
+        const url = URL.createObjectURL(file);
+        const isVideo = file.type.startsWith('video/');
+        mediaItems.unshift({
+          type: isVideo ? 'video' : 'image',
+          url,
+          caption: file.name.replace(/\.[^/.]+$/, "")
+        });
+      });
+      renderMediaGallery();
+      showToast(`${fileList.length} archivo(s) añadidos y autoajustados`);
+    }
+
+    document.getElementById('quick-media-upload').addEventListener('change', e => handleMediaFiles(e.target.files));
+    document.getElementById('modal-media-upload').addEventListener('change', e => handleMediaFiles(e.target.files));
+
+    // =========================================================================
+    // 5. VISUALIZADOR DE FONDO REACTIVO (HALO NEÓN + ONDAS + CARRETERA 3D)
+    // =========================================================================
+    const canvas = document.getElementById('visualizer-canvas');
+    const ctx = canvas.getContext('2d');
+    let speedLines = [];
+    let gridOffset = 0;
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function initSpeedLines() {
+      speedLines = Array.from({ length: 55 }).map(() => ({
+        x: (Math.random() - 0.5) * 1800,
+        y: (Math.random() - 0.5) * 1000,
+        z: 100 + Math.random() * 900
+      }));
+    }
+    initSpeedLines();
+
+    function animateBackground() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const w = canvas.width;
+      const h = canvas.height;
+      const horizonY = h * 0.54;
+
+      let bassEnergy = 0;
+      const isAnyAudioActive = isRadioPlaying;
+      if (analyser && dataArray && isAnyAudioActive) {
+        analyser.getByteFrequencyData(dataArray);
+        for (let i = 0; i < 16; i++) {
+          bassEnergy += dataArray[i];
+        }
+        bassEnergy = bassEnergy / (16 * 255); // 0 a 1
+      }
+
+      const rgb = currentTheme.particleRgb;
+      const gridRgb = currentTheme.gridRgb;
+
+      // 1. Halo / Sol Neón en el horizonte que late con los bajos
+      const pulseRadius = Math.min(w, h) * (0.18 + bassEnergy * 0.14);
+      const grad = ctx.createRadialGradient(
+        w * 0.5, horizonY, 10,
+        w * 0.5, horizonY, pulseRadius * 2.1
+      );
+      grad.addColorStop(0, `rgba(${rgb}, ${0.24 + bassEnergy * 0.35})`);
+      grad.addColorStop(0.5, `rgba(${gridRgb}, ${0.08 + bassEnergy * 0.14})`);
+      grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      // 2. Espectro de ondas de audio sobre el horizonte
+      if (analyser && dataArray && isAnyAudioActive) {
+        const barCount = 56;
+        const totalWidth = Math.min(w * 0.92, 980);
+        const startX = (w - totalWidth) / 2;
+        const barWidth = totalWidth / barCount;
+
+        for (let i = 0; i < barCount; i++) {
+          const val = dataArray[i] / 255;
+          const barHeight = val * (h * 0.22) + 2;
+          const x = startX + i * barWidth;
+          ctx.fillStyle = i % 2 === 0
+            ? `rgba(${rgb}, ${0.22 + val * 0.55})`
+            : `rgba(${gridRgb}, ${0.20 + val * 0.50})`;
+          ctx.fillRect(x, horizonY - barHeight, barWidth - 3, barHeight);
+        }
+      }
+
+      // 3. Carretera nocturna en perspectiva 3D acelerando con el beat
+      const roadSpeed = (isAnyAudioActive ? 2.5 : 0.7) + bassEnergy * 14;
+      gridOffset = (gridOffset + roadSpeed) % 50;
+
+      ctx.strokeStyle = `rgba(${gridRgb}, ${0.18 + bassEnergy * 0.25})`;
+      ctx.lineWidth = 1.2;
+
+      const numVerticalLines = 16;
+      for (let i = -numVerticalLines; i <= numVerticalLines; i++) {
+        const topX = w / 2 + i * 26;
+        const bottomX = w / 2 + i * 135;
+        ctx.beginPath();
+        ctx.moveTo(topX, horizonY);
+        ctx.lineTo(bottomX, h);
+        ctx.stroke();
+      }
+
+      for (let y = 0; y < h - horizonY; y += 24) {
+        const progress = (y + gridOffset) / (h - horizonY);
+        const perspectiveY = horizonY + Math.pow(progress, 1.65) * (h - horizonY);
+        ctx.beginPath();
+        ctx.moveTo(0, perspectiveY);
+        ctx.lineTo(w, perspectiveY);
+        ctx.stroke();
+      }
+
+      // 4. Estelas de velocidad nocturna (túnel en moto)
+      const starSpeed = (isAnyAudioActive ? 5 : 1.5) + bassEnergy * 24;
+      ctx.fillStyle = `rgba(${gridRgb}, ${0.4 + bassEnergy * 0.5})`;
+      speedLines.forEach(p => {
+        p.z -= starSpeed;
+        if (p.z <= 10) {
+          p.z = 1000;
+          p.x = (Math.random() - 0.5) * 1800;
+          p.y = (Math.random() - 0.5) * 1000;
+        }
+        const sx = (p.x / p.z) * 380 + w / 2;
+        const sy = (p.y / p.z) * 380 + horizonY;
+        const size = Math.max(1, (1 - p.z / 1000) * 3.4);
+
+        if (sx >= 0 && sx <= w && sy >= 0 && sy <= horizonY) {
+          ctx.beginPath();
+          ctx.arc(sx, sy, size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      requestAnimationFrame(animateBackground);
+    }
+
+    // =========================================================================
+    // 6. EXPERIENCIA DE APERTURA + CONFETI NEÓN + PERSONALIZACIÓN
+    // =========================================================================
+    function fireBirthdayConfetti() {
+      if (typeof confetti !== 'function') return;
+      const neonColors = ['#ff2a85', '#00f0ff', '#ffbe0b', '#d946ef'];
+      confetti({
+        particleCount: 95,
+        spread: 80,
+        colors: neonColors,
+        origin: { y: 0.6 }
+      });
+      setTimeout(() => {
+        confetti({
+          particleCount: 60,
+          angle: 60,
+          spread: 55,
+          colors: neonColors,
+          origin: { x: 0 }
+        });
+        confetti({
+          particleCount: 60,
+          angle: 120,
+          spread: 55,
+          colors: neonColors,
+          origin: { x: 1 }
+        });
+      }, 300);
+    }
+
+    document.getElementById('open-surprise-btn').addEventListener('click', () => {
+      initAudioEngine();
+      triggerEngineRevSound();
+
+      const overlay = document.getElementById('intro-overlay');
+      const mainContent = document.getElementById('main-content');
+
+      overlay.classList.add('opened');
+      mainContent.classList.remove('opacity-0');
+
+      fireBirthdayConfetti();
+
+      // REPRODUCCIÓN OBLIGATORIA DE LA PISTA #1 ("FELIZ CUMPLEAÑOS") AL ABRIR
+      setTimeout(() => playTrack(0, true), 350);
+    });
+
+    document.getElementById('confetti-trigger-btn').addEventListener('click', fireBirthdayConfetti);
+
+    // Modal de Configuración
+    const settingsModal = document.getElementById('settings-modal');
+    document.getElementById('open-settings-btn').addEventListener('click', () => {
+      settingsModal.classList.remove('hidden');
+      settingsModal.classList.add('flex');
+    });
+    document.getElementById('close-settings-btn').addEventListener('click', () => {
+      settingsModal.classList.add('hidden');
+      settingsModal.classList.remove('flex');
+    });
+
+    document.getElementById('save-settings-btn').addEventListener('click', () => {
+      const newName = document.getElementById('input-name').value.trim();
+      const newSender = document.getElementById('input-sender').value.trim();
+      const newMsg = document.getElementById('input-message').value.trim();
+
+      if (newName) document.getElementById('display-name').textContent = newName;
+      if (newSender) document.getElementById('display-sender').textContent = newSender;
+      if (newMsg) {
+        document.getElementById('display-message').innerHTML = newMsg
+          .split('\n\n')
+          .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+          .join('');
+      }
+
+      settingsModal.classList.add('hidden');
+      settingsModal.classList.remove('flex');
+      showToast("¡Carta actualizada con éxito!");
+    });
+
+    // Reemplazar Pista #1 ("Feliz Cumpleaños") con un MP3 local
+    document.getElementById('replace-bday-song').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      radioPlaylist[0] = {
+        ...radioPlaylist[0],
+        title: cleanTrackTitle(file.name),
+        artist: "Canción Personal de Cumpleaños",
+        type: "file",
+        url
+      };
+      renderPlaylistMini();
+      playTrack(0, true);
+      showToast("Pista #1 actualizada y reproduciendo");
+    });
+
+    // Agregar canciones extra a la estación de radio
+    document.getElementById('add-radio-songs').addEventListener('change', (e) => {
+      const files = e.target.files;
+      if (!files || files.length === 0) return;
+      Array.from(files).forEach((file, idx) => {
+        radioPlaylist.push({
+          title: cleanTrackTitle(file.name),
+          artist: "Playlist Personal",
+          themeIdx: (radioPlaylist.length + idx) % THEMES.length,
+          type: "file",
+          url: URL.createObjectURL(file)
+        });
+      });
+      renderPlaylistMini();
+      showToast(`${files.length} canción(es) añadidas a la radio`);
+    });
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast-msg');
+      document.getElementById('toast-text').textContent = msg;
+      toast.classList.remove('opacity-0');
+      setTimeout(() => {
+        toast.classList.add('opacity-0');
+      }, 3000);
+    }
+
+    // Inicialización al cargar
+    window.onload = function () {
+      applyTheme(0);
+      renderPlaylistMini();
+      renderMediaGallery();
+      animateBackground();
+    };
+  </script>
+</body>
+</html>
